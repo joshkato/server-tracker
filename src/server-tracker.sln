@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Configuration", "Configuration", "{F54B0A6E-0262-4172-A980-0BB3E2F4E683}"
 	ProjectSection(SolutionItems) = preProject
 		..\.editorconfig = ..\.editorconfig
+		..\.gitignore = ..\.gitignore
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{31B49082-7880-4500-A660-26ABFF91CD04}"
@@ -15,7 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentat
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerTracker.Data", "ServerTracker.Data\ServerTracker.Data.csproj", "{4EE17E5E-F543-4231-B0E8-D08608DDE57F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerTracker", "ServerTracker\ServerTracker.csproj", "{502E09E8-7E24-40A5-BA4B-26379795973A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerTracker", "ServerTracker\ServerTracker.csproj", "{502E09E8-7E24-40A5-BA4B-26379795973A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
