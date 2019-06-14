@@ -101,7 +101,17 @@ namespace ServerTracker
 
         private void UseSqliteDataSource(IServiceCollection services)
         {
+            services.AddSingleton<IDatabaseBootstrapper, DatabaseBootstrapperSqlite>(provider =>
+            {
+                var logger = provider.GetService<ILogger<DatabaseBootstrapperSqlite>>();
+                var config = provider.GetService<IConfiguration>();
 
+                var connectionString = config.GetValue<string>("SqliteConnectionString");
+
+                return new DatabaseBootstrapperSqlite(logger, connectionString);
+            });
+            services.AddSingleton<IEnvironmentsRepository, EnvironmentsRepositorySqlite>();
+            services.AddSingleton<IServersRepository, ServersRepositorySqlite>();
         }
     }
 }
