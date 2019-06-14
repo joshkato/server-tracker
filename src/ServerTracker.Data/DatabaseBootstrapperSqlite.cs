@@ -41,7 +41,7 @@ namespace ServerTracker.Data
 	                EnvironmentId integer not null,
 	                Name varchar(100) default '' not null,
 	                DomainName varchar(250) default '' not null,
-	                IpAddress integer default 0 not null,
+	                IpAddress varchar(20) default '127.0.0.1' not null,
 	                OperatingSystem varchar(100) default 'Unknown' not null,
 	                CreatedAt timestamp default current_timestamp not null
                 );
@@ -53,6 +53,14 @@ namespace ServerTracker.Data
                 conn.Open();
                 conn.Execute(createEnvironmentsTable);
                 conn.Execute(createServersTable);
+
+                // We'll make sure we have some kind of initial environment to work with:
+                var devEnv = conn.QueryFirstOrDefault<Models.Environment>("SELECT * FROM [environments] WHERE [Name] = @Name;", new {Name = "Development"});
+                if (devEnv == null)
+                {
+                    conn.Execute("INSERT INTO [environments] ([Name]) VALUES ('Development');");
+                }
+
                 conn.Close();
             }
         }
