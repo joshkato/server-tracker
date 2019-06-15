@@ -17,7 +17,7 @@ namespace ServerTracker.Data.Repositories
             ConnectionString = connectionString;
         }
 
-        public async Task CreateServer(Server server)
+        public async Task AddNewServer(Server server)
         {
             const string sql = @"
                 INSERT INTO [servers] (
@@ -92,7 +92,7 @@ namespace ServerTracker.Data.Repositories
             return servers;
         }
 
-        public async Task RemoveServer(long id)
+        public async Task DeleteServer(long id)
         {
             const string sql = @"
                 DELETE FROM [servers]

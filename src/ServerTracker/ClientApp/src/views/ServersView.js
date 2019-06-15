@@ -1,8 +1,8 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { Button, Col, Form, FormGroup, Input, Label, Table } from 'reactstrap';
+import { Button, ButtonGroup, Col, Form, FormGroup, Input, Label, Table } from 'reactstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faHistory, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
 import _ from 'lodash';
 import { getAllEnvironments } from './../actions/environments';
 import { addServer, deleteServer, getAllServers, updateServer } from './../actions/servers';
@@ -28,6 +28,7 @@ class ServersView extends React.Component {
     };
 
     this.handleAddServerClick = this.handleAddServerClick.bind(this);
+    this.handleServerFormResetClick = this.handleServerFormResetClick.bind(this);
     this.handleUpdateServerClick = this.handleUpdateServerClick.bind(this);
     this.handleEnvironmentChanged = this.handleEnvironmentChanged.bind(this);
     this.handleServerNameChanged = this.handleServerNameChanged.bind(this);
@@ -48,6 +49,13 @@ class ServersView extends React.Component {
       operatingSystem: this.state.serverOs
     });
 
+    const defaultServer = getDefaultServer();
+    this.setState({
+      ...defaultServer
+    });
+  }
+
+  handleServerFormResetClick(event) {
     const defaultServer = getDefaultServer();
     this.setState({
       ...defaultServer
@@ -116,19 +124,31 @@ class ServersView extends React.Component {
   }
 
   renderServerFormButton() {
+    const buttons = [
+      (<Button color="primary" onClick={this.handleServerFormResetClick} key="btnReset">
+        <FontAwesomeIcon icon={faHistory} />&nbsp;Reset
+      </Button>)
+    ];
+
     if (this.state.serverId) {
-      return (
-        <Button color="warning" onClick={this.handleUpdateServerClick}>
+      buttons.unshift(
+        <Button color="warning" onClick={this.handleUpdateServerClick} key="btnUpdate">
           <FontAwesomeIcon icon={faEdit} />&nbsp;Update
+        </Button>
+      );
+    } else {
+      buttons.unshift(
+        <Button color="success" onClick={this.handleAddServerClick} key="btnAdd">
+          <FontAwesomeIcon icon={faPlus} />&nbsp;Add
         </Button>
       )
     }
 
     return (
-      <Button color="success" onClick={this.handleAddServerClick}>
-        <FontAwesomeIcon icon={faPlus} />&nbsp;Add
-      </Button>
-    );
+      <ButtonGroup>
+        {buttons}
+      </ButtonGroup>
+    )
   }
 
   renderServerRows(envId) {

@@ -26,7 +26,7 @@ namespace ServerTracker.Data.Repositories
                 }
             };
 
-        public Task CreateServer(Server server)
+        public Task AddNewServer(Server server)
         {
             server.CreatedAt = DateTime.Now;
 
@@ -65,7 +65,7 @@ namespace ServerTracker.Data.Repositories
             return Task.FromResult(servers);
         }
 
-        public Task RemoveServer(long id)
+        public Task DeleteServer(long id)
         {
             Servers.TryRemove(id, out _);
             return Task.CompletedTask;

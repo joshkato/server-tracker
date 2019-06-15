@@ -1,13 +1,12 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using ServerTracker.Data.Repositories;
+using ServerTracker.Data.Models;
 using ServerTracker.Data.Services;
 using ServerTracker.Messages;
 
 namespace ServerTracker.Hubs
 {
-    using Environment = Data.Models.Environment;
     using Server = Data.Models.Server;
 
     public class ServerTrackerHub : Hub
@@ -18,14 +17,14 @@ namespace ServerTracker.Hubs
 
         private IEnvironmentsService EnvsSvc { get; }
 
-        private IServersRepository ServersRepo { get; }
+        private IServersService ServersSvc { get; }
 
-        public ServerTrackerHub(ILogger<ServerTrackerHub> logger, IEnvironmentsService envsSvc, IServersRepository serversRepo)
+        public ServerTrackerHub(ILogger<ServerTrackerHub> logger, IEnvironmentsService envsSvc, IServersService serversSvc)
         {
             Log = logger;
 
             EnvsSvc = envsSvc;
-            ServersRepo = serversRepo;
+            ServersSvc = serversSvc;
         }
 
         public async Task CreateNewEnvironment(string envName)
@@ -40,9 +39,7 @@ namespace ServerTracker.Hubs
             var error = await EnvsSvc.AddNewEnvironment(env).ConfigureAwait(false);
             if (error != null)
             {
-                var errResponse = ServerErrorMessage.FromServiceError(error);
-                await Clients.Caller.SendAsync(DISPATCH_MESSAGE, errResponse).ConfigureAwait(false);
-
+                await SendErrorToCaller(error).ConfigureAwait(false);
                 return;
             }
 
@@ -53,9 +50,14 @@ namespace ServerTracker.Hubs
         {
             Log.LogInformation("Creating new server: {serverName} ({domainName})", server.Name, server.DomainName);
 
-            await ServersRepo.CreateServer(server).ConfigureAwait(false);
+            var error = await ServersSvc.AddNewServer(server).ConfigureAwait(false);
+            if (error != null)
+            {
+                await SendErrorToCaller(error).ConfigureAwait(false);
+                return;
+            }
 
-            await UpdateAvailableServers();
+            await UpdateAvailableServers().ConfigureAwait(false);
         }
 
         public async Task GetAllEnvironments()
@@ -63,30 +65,23 @@ namespace ServerTracker.Hubs
             var (environments, error) = await EnvsSvc.GetAllEnvironments().ConfigureAwait(false);
             if (error != null)
             {
-                var errResponse = ServerErrorMessage.FromServiceError(error);
-                await Clients.Caller.SendAsync(DISPATCH_MESSAGE, errResponse).ConfigureAwait(false);
-
+                await SendErrorToCaller(error).ConfigureAwait(false);
                 return;
             }
 
-            var response = ClientMessage.ForData(MessageTypes.ENV_RECV_ALL, environments);
-            await Clients.Caller.SendAsync(DISPATCH_MESSAGE, response).ConfigureAwait(false);
+            await DispatchToCaller(MessageTypes.ENV_RECV_ALL, environments).ConfigureAwait(false);
         }
 
         public async Task GetAllServers()
         {
-            var servers = await ServersRepo.GetAllServers().ConfigureAwait(false);
+            var (servers, error) = await ServersSvc.GetAllServers().ConfigureAwait(false);
+            if (error != null)
+            {
+                await SendErrorToCaller(error).ConfigureAwait(false);
+                return;
+            }
 
-            var response = ClientMessage.ForData(MessageTypes.SERVERS_RECV_ALL, servers);
-            await Clients.Caller.SendAsync(DISPATCH_MESSAGE, response).ConfigureAwait(false);
-        }
-
-        public async Task GetServersForEnvironment(long envId)
-        {
-            var servers = await ServersRepo.GetServersForEnvironment(envId).ConfigureAwait(false);
-
-            var response = ClientMessage.ForData(MessageTypes.SERVERS_RECV_FOR_ENV, servers);
-            await Clients.Caller.SendAsync(DISPATCH_MESSAGE, response).ConfigureAwait(false);
+            await DispatchToCaller(MessageTypes.SERVERS_RECV_ALL, servers).ConfigureAwait(false);
         }
 
         public async Task RemoveEnvironment(long id)
@@ -96,10 +91,8 @@ namespace ServerTracker.Hubs
             var error = await EnvsSvc.DeleteEnvironment(id).ConfigureAwait(false);
             if (error != null)
             {
-                var errResponse = ServerErrorMessage.FromServiceError(error);
-                await Clients.Caller.SendAsync(DISPATCH_MESSAGE, errResponse).ConfigureAwait(false);
-
-                return; 
+                await SendErrorToCaller(error).ConfigureAwait(false);
+                return;
             }
 
             await UpdateAvailableEnvironments().ConfigureAwait(false);
@@ -109,7 +102,12 @@ namespace ServerTracker.Hubs
         {
             Log.LogInformation("Removing existing server with ID {id}", id);
 
-            await ServersRepo.RemoveServer(id).ConfigureAwait(false);
+            var error = await ServersSvc.DeleteServer(id).ConfigureAwait(false);
+            if (error != null)
+            {
+                await SendErrorToCaller(error).ConfigureAwait(false);
+                return;
+            }
 
             await UpdateAvailableServers().ConfigureAwait(false);
         }
@@ -118,9 +116,32 @@ namespace ServerTracker.Hubs
         {
             Log.LogInformation("Updating server with ID {id}", server.Id);
 
-            await ServersRepo.UpdateServer(server).ConfigureAwait(false);
+            var error = await ServersSvc.UpdateServer(server).ConfigureAwait(false);
+            if (error != null)
+            {
+                await SendErrorToCaller(error).ConfigureAwait(false);
+                return;
+            }
 
             await UpdateAvailableServers().ConfigureAwait(false);
+        }
+
+        private Task DispatchToCaller<T>(string actionType, T data)
+        {
+            var message = ClientMessage.ForData(actionType, data);
+            return Clients.Caller.SendAsync(DISPATCH_MESSAGE, message);
+        }
+
+        private Task DispatchToAll<T>(string actionType, T data)
+        {
+            var message = ClientMessage.ForData(actionType, data);
+            return Clients.All.SendAsync(DISPATCH_MESSAGE, message);
+        }
+
+        private async Task SendErrorToCaller(ServiceError error)
+        {
+            var errResponse = ServerErrorMessage.FromServiceError(error);
+            await Clients.Caller.SendAsync(DISPATCH_MESSAGE, errResponse).ConfigureAwait(false);
         }
 
         private async Task UpdateAvailableEnvironments()
@@ -135,24 +156,28 @@ namespace ServerTracker.Hubs
             }
 
             Log.LogTrace("Updating all clients with {count} environments.", environments.Count);
-
-            var response = ClientMessage.ForData(MessageTypes.ENV_RECV_ALL, environments);
-            await Clients.All.SendAsync(DISPATCH_MESSAGE, response).ConfigureAwait(false);
+            await DispatchToAll(MessageTypes.ENV_RECV_ALL, environments).ConfigureAwait(false);
         }
 
         private async Task UpdateAvailableServers()
         {
-            var servers = await ServersRepo.GetAllServers().ConfigureAwait(false);
+            var (servers, error) = await ServersSvc.GetAllServers().ConfigureAwait(false);
+            if (error != null)
+            {
+                // Since this is a global update for anyone connected to the server, we don't
+                // need to notify everyone when it fails. For now, we'll let the underlying
+                // service log the error then not do anything for the clients.
+                return;
+            }
 
-            var response = ClientMessage.ForData(MessageTypes.SERVERS_RECV_ALL, servers);
-            await Clients.All.SendAsync(DISPATCH_MESSAGE, response).ConfigureAwait(false);
+            Log.LogTrace("Updating all clients with {count} servers.", servers.Count);
+            await DispatchToAll(MessageTypes.SERVERS_RECV_ALL, servers).ConfigureAwait(false);
         }
 
         private static class MessageTypes
         {
-            public const string ENV_RECV_ALL         = "ENV_RECV_ALL";
-            public const string SERVERS_RECV_ALL     = "SERVERS_RECV_ALL";
-            public const string SERVERS_RECV_FOR_ENV = "SERVERS_RECV_FOR_ENV";
+            public const string ENV_RECV_ALL     = "ENV_RECV_ALL";
+            public const string SERVERS_RECV_ALL = "SERVERS_RECV_ALL";
         }
     }
 

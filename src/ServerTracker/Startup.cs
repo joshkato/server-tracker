@@ -126,6 +126,7 @@ namespace ServerTracker
         private void RegisterServices(IServiceCollection services)
         {
             services.AddSingleton<IEnvironmentsService, EnvironmentsService>();
+            services.AddSingleton<IServersService, ServersService>();
         }
     }
 }
