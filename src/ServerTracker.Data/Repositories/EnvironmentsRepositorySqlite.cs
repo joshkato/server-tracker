@@ -17,7 +17,7 @@ namespace ServerTracker.Data.Repositories
             ConnectionString = connectionString;
         }
 
-        public async Task CreateEnvironment(Environment env)
+        public async Task AddNewEnvironment(Environment env)
         {
             const string sql = @"
                 INSERT INTO [environments] (
@@ -49,7 +49,7 @@ namespace ServerTracker.Data.Repositories
             return environments;
         }
 
-        public async Task RemoveEnvironment(long id)
+        public async Task DeleteEnvironment(long id)
         {
             const string sql = @"
                 DELETE FROM [environments]

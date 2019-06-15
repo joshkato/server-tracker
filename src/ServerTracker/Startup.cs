@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ServerTracker.Data;
 using ServerTracker.Data.Repositories;
+using ServerTracker.Data.Services;
 using ServerTracker.Hubs;
 
 namespace ServerTracker
@@ -47,6 +48,8 @@ namespace ServerTracker
                     UseInMemoryDataStore(services);
                     break;
             }
+
+            RegisterServices(services);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -114,6 +117,11 @@ namespace ServerTracker
 
             services.AddSingleton<IServersRepository, ServersRepositorySqlite>(provider =>
                 new ServersRepositorySqlite(connectionString));
+        }
+
+        private void RegisterServices(IServiceCollection services)
+        {
+            services.AddSingleton<IEnvironmentsService, EnvironmentsService>();
         }
     }
 }

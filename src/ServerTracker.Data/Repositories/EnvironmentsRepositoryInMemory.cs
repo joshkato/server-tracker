@@ -22,7 +22,7 @@ namespace ServerTracker.Data.Repositories
                 }
             };
 
-        public Task CreateEnvironment(Environment env)
+        public Task AddNewEnvironment(Environment env)
         {
             // Force sequential IDs for environments.
             bool added;
@@ -45,7 +45,7 @@ namespace ServerTracker.Data.Repositories
             return Task.FromResult(envs);
         }
 
-        public Task RemoveEnvironment(long id)
+        public Task DeleteEnvironment(long id)
         {
             Environments.TryRemove(id, out _);
             return Task.CompletedTask;

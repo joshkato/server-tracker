@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ServerTracker.Data.Repositories
@@ -9,10 +7,10 @@ namespace ServerTracker.Data.Repositories
 
     public interface IEnvironmentsRepository
     {
-        Task CreateEnvironment(Environment env);
+        Task AddNewEnvironment(Environment env);
+
+        Task DeleteEnvironment(long id);
 
         Task<List<Environment>> GetAllEnvironments();
-
-        Task RemoveEnvironment(long id);
     }
 }

@@ -1,8 +1,9 @@
-using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using ServerTracker.Data.Repositories;
+using ServerTracker.Data.Services;
+using ServerTracker.Messages;
 
 namespace ServerTracker.Hubs
 {
@@ -15,24 +16,35 @@ namespace ServerTracker.Hubs
 
         private ILogger Log { get; }
 
-        private IEnvironmentsRepository EnvsRepo { get; }
+        private IEnvironmentsService EnvsSvc { get; }
 
         private IServersRepository ServersRepo { get; }
 
-        public ServerTrackerHub(ILogger<ServerTrackerHub> logger, IEnvironmentsRepository envsRepo, IServersRepository serversRepo)
+        public ServerTrackerHub(ILogger<ServerTrackerHub> logger, IEnvironmentsService envsSvc, IServersRepository serversRepo)
         {
             Log = logger;
 
-            EnvsRepo = envsRepo;
+            EnvsSvc = envsSvc;
             ServersRepo = serversRepo;
         }
 
         public async Task CreateNewEnvironment(string envName)
         {
-            Log.LogInformation("Creating new environment: {envName}", envName);
+            var env = new Environment
+            {
+                Name = envName,
+            };
 
-            await EnvsRepo.CreateEnvironment(new Environment {Name = envName, CreatedAt = DateTime.Now,})
-                .ConfigureAwait(false);
+            Log.LogInformation("Adding new environment with name {name}", env.Name);
+
+            var error = await EnvsSvc.AddNewEnvironment(env).ConfigureAwait(false);
+            if (error != null)
+            {
+                var errResponse = ServerErrorMessage.FromServiceError(error);
+                await Clients.Caller.SendAsync(DISPATCH_MESSAGE, errResponse).ConfigureAwait(false);
+
+                return;
+            }
 
             await UpdateAvailableEnvironments().ConfigureAwait(false);
         }
@@ -48,8 +60,14 @@ namespace ServerTracker.Hubs
 
         public async Task GetAllEnvironments()
         {
-            var environments = await EnvsRepo.GetAllEnvironments()
-                .ConfigureAwait(false);
+            var (environments, error) = await EnvsSvc.GetAllEnvironments().ConfigureAwait(false);
+            if (error != null)
+            {
+                var errResponse = ServerErrorMessage.FromServiceError(error);
+                await Clients.Caller.SendAsync(DISPATCH_MESSAGE, errResponse).ConfigureAwait(false);
+
+                return;
+            }
 
             var response = ClientMessage.ForData(MessageTypes.ENV_RECV_ALL, environments);
             await Clients.Caller.SendAsync(DISPATCH_MESSAGE, response).ConfigureAwait(false);
@@ -75,7 +93,14 @@ namespace ServerTracker.Hubs
         {
             Log.LogInformation("Removing existing environment with ID {id}", id);
 
-            await EnvsRepo.RemoveEnvironment(id).ConfigureAwait(false);
+            var error = await EnvsSvc.DeleteEnvironment(id).ConfigureAwait(false);
+            if (error != null)
+            {
+                var errResponse = ServerErrorMessage.FromServiceError(error);
+                await Clients.Caller.SendAsync(DISPATCH_MESSAGE, errResponse).ConfigureAwait(false);
+
+                return; 
+            }
 
             await UpdateAvailableEnvironments().ConfigureAwait(false);
         }
@@ -100,8 +125,16 @@ namespace ServerTracker.Hubs
 
         private async Task UpdateAvailableEnvironments()
         {
-            var environments = await EnvsRepo.GetAllEnvironments()
-                .ConfigureAwait(false);
+            var (environments, error) = await EnvsSvc.GetAllEnvironments().ConfigureAwait(false);
+            if (error != null)
+            {
+                // Since this is a global update for anyone connected to the server, we don't
+                // need to notify everyone when it fails. For now, we'll let the underlying
+                // service log the error then not do anything for the clients.
+                return;
+            }
+
+            Log.LogTrace("Updating all clients with {count} environments.", environments.Count);
 
             var response = ClientMessage.ForData(MessageTypes.ENV_RECV_ALL, environments);
             await Clients.All.SendAsync(DISPATCH_MESSAGE, response).ConfigureAwait(false);
