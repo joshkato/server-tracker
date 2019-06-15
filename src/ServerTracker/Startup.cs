@@ -1,3 +1,4 @@
+using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
@@ -44,9 +45,12 @@ namespace ServerTracker
                 case "sqlite":
                     UseSqliteDataSource(services);
                     break;
-                default:
+                case "in-memory":
                     UseInMemoryDataStore(services);
                     break;
+                default:
+                    Log.LogCritical($"Specified data source configuration '{dataSourceConfig}' is not valid.");
+                    throw new InvalidOperationException($"Specified data source configuration '{dataSourceConfig}' is not valid.");
             }
 
             RegisterServices(services);
