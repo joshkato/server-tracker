@@ -1,9 +1,16 @@
+import { toast } from 'react-toastify';
+
 const defaultState = {};
 
 const handlers = {};
 
 handlers['ERR_SERVER'] = (state, action) => {
-  console.error(action.message);
+  toast.error(action.message, {
+    autoClose: 7500,
+    pauseOnHover: true,
+    position: toast.POSITION.TOP_LEFT
+  });
+
   return state;
 }
 

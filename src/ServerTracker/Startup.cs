@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using ServerTracker.Data;
 using ServerTracker.Data.Repositories;
 using ServerTracker.Data.Services;
+using ServerTracker.Data.Validation;
 using ServerTracker.Hubs;
 
 namespace ServerTracker
@@ -54,6 +55,7 @@ namespace ServerTracker
             }
 
             RegisterServices(services);
+            RegisterValidators(services);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -127,6 +129,11 @@ namespace ServerTracker
         {
             services.AddSingleton<IEnvironmentsService, EnvironmentsService>();
             services.AddSingleton<IServersService, ServersService>();
+        }
+
+        private void RegisterValidators(IServiceCollection services)
+        {
+            services.AddSingleton<IServerValidator, ServerValidator>();
         }
     }
 }

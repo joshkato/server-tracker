@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ServerTracker.Data.Models;
 using ServerTracker.Data.Repositories;
+using ServerTracker.Data.Validation;
 
 namespace ServerTracker.Data.Services
 {
@@ -12,7 +13,6 @@ namespace ServerTracker.Data.Services
         Task<ServiceError> AddNewServer(Server server);
         Task<ServiceError> DeleteServer(long id);
         Task<(List<Server>, ServiceError)> GetAllServers();
-        Task<Server> GetServer(long id);
         Task<ServiceError> UpdateServer(Server server);
     }
 
@@ -22,15 +22,27 @@ namespace ServerTracker.Data.Services
 
         private IServersRepository ServersRepo { get; }
 
-        public ServersService(ILogger<ServersService> logger, IServersRepository serversRepo)
+        private IServerValidator ServerValidator { get; }
+
+        public ServersService(ILogger<ServersService> logger, IServersRepository serversRepo, IServerValidator serverValidator)
         {
             Log = logger;
             ServersRepo = serversRepo;
+            ServerValidator = serverValidator;
         }
 
         public async Task<ServiceError> AddNewServer(Server server)
         {
-            // TODO - Add validation
+            var validationResult = ServerValidator.Validate(server);
+            if (!validationResult.IsValid)
+            {
+                return new ServiceError
+                {
+                    Message =
+                        $"Provided server data did not pass validation:\n{string.Join("\n", validationResult.ValidationErrors)}",
+                };
+            }
+
             try
             {
                 await ServersRepo.AddNewServer(server).ConfigureAwait(false);
@@ -41,7 +53,7 @@ namespace ServerTracker.Data.Services
                 Log.LogError(ex, "Failed to add new server: {name} ({domain})", server.Name, server.DomainName);
                 return new ServiceError
                 {
-                    Message = "Failed to add server.",
+                    Message = "Failed to add new server.",
                     Exception = ex,
                 };
             }
@@ -68,11 +80,6 @@ namespace ServerTracker.Data.Services
             return null;
         }
 
-        public async Task<Server> GetServer(long id)
-        {
-            return await Task.FromResult((Server)null).ConfigureAwait(false);
-        }
-
         public async Task<(List<Server>, ServiceError)> GetAllServers()
         {
             List<Server> servers;
@@ -95,7 +102,16 @@ namespace ServerTracker.Data.Services
 
         public async Task<ServiceError> UpdateServer(Server server)
         {
-            // TODO - Add validation
+            var validationResult = ServerValidator.Validate(server);
+            if (!validationResult.IsValid)
+            {
+                return new ServiceError
+                {
+                    Message =
+                        $"Provided server data did not pass validation:\n{string.Join("\n", validationResult.ValidationErrors)}",
+                };
+            }
+
             try
             {
                 await ServersRepo.UpdateServer(server).ConfigureAwait(false);

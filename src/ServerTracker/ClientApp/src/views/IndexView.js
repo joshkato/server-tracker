@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom'
+import { Button } from 'reactstrap';
+import { toast } from 'react-toastify';
 
 export default class IndexView extends React.Component {
   render() {
